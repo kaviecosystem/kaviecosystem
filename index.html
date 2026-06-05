@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kavi Ecosystem — Token Utilities</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:    #F5C842;
+      --gold-lt: #FFE47A;
+      --bg0:     #07071A;
+      --bg1:     #0D0D24;
+      --bg2:     #12122E;
+      --surface: rgba(255,255,255,0.04);
+      --border:  rgba(255,255,255,0.08);
+      --text-1:  #FFFFFF;
+      --text-2:  rgba(255,255,255,0.55);
+      --text-3:  rgba(255,255,255,0.28);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg0);
+      color: var(--text-1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── CANVAS BACKGROUND ─── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ─── GRID OVERLAY ─── */
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(245,200,66,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,200,66,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* ─── NOISE GRAIN ─── */
+    .grain {
+      position: fixed;
+      inset: -200%;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      animation: grain-shift 8s steps(10) infinite;
+    }
+    @keyframes grain-shift {
+      0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-2%)}20%{transform:translate(2%,2%)}
+      30%{transform:translate(-1%,2%)}40%{transform:translate(2%,-1%)}50%{transform:translate(-2%,1%)}
+      60%{transform:translate(1%,-2%)}70%{transform:translate(-1%,1%)}80%{transform:translate(2%,-2%)}90%{transform:translate(-2%,2%)}
+    }
+
+    /* ─── WRAPPER ─── */
+    .wrapper {
+      position: relative;
+      z-index: 2;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ─── TOPBAR ─── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0 0;
+      opacity: 0;
+      transform: translateY(-20px);
+      animation: fadeUp 0.7s ease forwards 0.1s;
+    }
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-hex {
+      width: 36px; height: 36px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-hex svg { width: 36px; height: 36px; }
+    .topbar-brand {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-1);
+      letter-spacing: -0.3px;
+    }
+    .topbar-brand span { color: var(--gold); }
+    .topbar-pill {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(245,200,66,0.1);
+      border: 1px solid rgba(245,200,66,0.25);
+      border-radius: 40px;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      background: #00E5A0;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00E5A0;
+      animation: blink 1.8s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.75)}
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      text-align: center;
+      padding: 72px 0 56px;
+      position: relative;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(245,200,66,0.07);
+      border: 1px solid rgba(245,200,66,0.2);
+      border-radius: 40px;
+      padding: 7px 18px;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.25s;
+    }
+    .hero-eyebrow::before {
+      content: '◆';
+      font-size: 8px;
+      color: var(--gold);
+    }
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(40px, 6vw, 68px);
+      font-weight: 800;
+      line-height: 1.02;
+      letter-spacing: -2px;
+      color: var(--text-1);
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.35s;
+    }
+    .hero-title .gold-word {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      margin-top: 16px;
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--text-2);
+      letter-spacing: 0.3px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.45s;
+    }
+    .hero-line {
+      width: 56px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      margin: 24px auto 0;
+      border-radius: 2px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.55s;
+    }
+
+    /* ─── STATS BAR ─── */
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      padding: 0 0 56px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.65s;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-3);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .stat-sep {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+    }
+
+    /* ─── SECTION LABEL ─── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.7s;
+    }
+    .section-label-text {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .section-label-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── CARDS GRID ─── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 24px 22px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(30px);
+      transition:
+        transform 0.38s cubic-bezier(0.16,1,0.3,1),
+        border-color 0.3s ease,
+        background 0.3s ease,
+        box-shadow 0.38s ease;
+    }
+
+    /* staggered appear animation */
+    .card:nth-child(1){animation: cardIn 0.6s ease forwards 0.8s}
+    .card:nth-child(2){animation: cardIn 0.6s ease forwards 0.9s}
+    .card:nth-child(3){animation: cardIn 0.6s ease forwards 1.0s}
+    .card:nth-child(4){animation: cardIn 0.6s ease forwards 1.1s}
+    .card:nth-child(5){animation: cardIn 0.6s ease forwards 1.2s}
+    .card:nth-child(6){animation: cardIn 0.6s ease forwards 1.3s}
+
+    @keyframes cardIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* glow blob behind card */
+    .card::before {
+      content: '';
+      position: absolute;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: var(--card-glow, transparent);
+      top: -60px; right: -60px;
+      opacity: 0;
+      filter: blur(50px);
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+    .card:hover::before { opacity: 0.35; }
+
+    /* bottom accent line */
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--card-accent, transparent);
+      transform: scaleX(0);
+      transform-origin: left;
+      border-radius: 0 0 18px 18px;
+      transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+    }
+    .card:hover::after { transform: scaleX(1); }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: var(--card-border, rgba(255,255,255,0.18));
+      background: rgba(255,255,255,0.065);
+      box-shadow: 0 24px 56px rgba(0,0,0,0.5), 0 0 0 1px var(--card-border, transparent);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .card-icon {
+      width: 50px; height: 50px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    .card:hover .card-icon { transform: scale(1.12) rotate(-3deg); }
+
+    .card-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--badge-bg, rgba(255,255,255,0.08));
+      color: var(--badge-color, rgba(255,255,255,0.5));
+      border: 1px solid var(--badge-border, rgba(255,255,255,0.1));
+      white-space: nowrap;
+    }
+
+    .card-cat {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--card-accent, rgba(255,255,255,0.35));
+      margin-top: 14px;
+    }
+
+    .card-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text-1);
+      line-height: 1.2;
+      letter-spacing: -0.3px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--text-2);
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+
+    .card-cta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--card-accent, rgba(255,255,255,0.4));
+      transition: gap 0.25s ease;
+      letter-spacing: 0.3px;
+    }
+    .card:hover .card-cta { gap: 10px; }
+
+    .cta-arrow {
+      font-size: 16px;
+      display: inline-block;
+      transition: transform 0.25s ease;
+    }
+    .card:hover .cta-arrow { transform: translateX(4px); }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      margin-top: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 1.5s;
+    }
+    .footer-line { flex: 1; height: 1px; background: var(--border); }
+    .footer-text {
+      font-size: 11px;
+      color: var(--text-3);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ─── SCROLL CURSOR ─── */
+    .cursor {
+      width: 20px; height: 20px;
+      border: 1.5px solid rgba(245,200,66,0.5);
+      border-radius: 50%;
+      position: fixed;
+      top: 0; left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width 0.2s, height 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .cursor.hover {
+      width: 36px; height: 36px;
+      background: rgba(245,200,66,0.12);
+      border-color: var(--gold);
+    }
+
+    /* ─── KEYFRAMES ─── */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 780px) {
+      .cards-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero-title { font-size: 38px; letter-spacing: -1px; }
+      .stats-bar { gap: 24px; }
+    }
+    @media (max-width: 520px) {
+      .cards-grid { grid-template-columns: 1fr; }
+      .stats-bar { gap: 16px; }
+      .stat-sep { display: none; }
+      .hero-title { font-size: 32px; }
+      .wrapper { padding: 0 16px 60px; }
+      .cursor { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor"></div>
+
+<!-- Background canvas for animated particles -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Grid & grain overlays -->
+<div class="grid-overlay"></div>
+<div class="grain"></div>
+
+<div class="wrapper">
+
+  <!-- TOP BAR -->
+  <nav class="topbar">
+    <a href="#" class="topbar-logo">
+      <div class="logo-hex">
+        <svg viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 33,10 33,26 18,34 3,26 3,10"
+            fill="rgba(245,200,66,0.1)" stroke="#F5C842" stroke-width="1.2"/>
+          <polygon points="18,8 27,13 27,23 18,28 9,23 9,13"
+            fill="#F5C842" opacity="0.15"/>
+          <circle cx="18" cy="18" r="4" fill="#F5C842"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">KAVI<span>.</span></span>
+    </a>
+    <div class="topbar-pill">
+      <span class="live-dot"></span>
+      Live on-chain
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-eyebrow">Kavi Ecosystem</div>
+    <h1 class="hero-title">
+      Token<br>
+      <span class="gold-word">Utilities</span>
+    </h1>
+    <p class="hero-sub">Six powerful tools built on the KAVI network.<br>DeFi, gaming, swaps &amp; more — all in one place.</p>
+    <div class="hero-line"></div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Utilities</div>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <div class="stat-num">KAVI</div>
+      <div class="stat-label">Native Token</div>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">On-Chain</div>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <div class="stat-num">Web3</div>
+      <div class="stat-label">Ecosystem</div>
+    </div>
+  </div>
+
+  <!-- SECTION LABEL -->
+  <div class="section-label">
+    <span class="section-label-text">All utilities</span>
+    <span class="section-label-line"></span>
+  </div>
+
+  <!-- CARDS GRID -->
+  <main class="cards-grid" id="cards-grid">
+
+    <!-- 1. Trance Protocol -->
+    <a class="card"
+       href="https://tranceglobal.github.io/protocol1"
+       target="_blank" rel="noopener"
+       style="
+         --card-accent:#A78BFA;
+         --card-glow:rgba(167,139,250,0.8);
+         --card-border:rgba(167,139,250,0.35);
+         --badge-bg:rgba(167,139,250,0.12);
+         --badge-color:#C4B5FD;
+         --badge-border:rgba(167,139,250,0.25);">
+      <div class="card-top">
+        <div class="card-icon">🌀</div>
+        <span class="card-badge">Protocol</span>
+      </div>
+      <div class="card-cat">Infrastructure</div>
+      <div class="card-name">Trance Protocol</div>
+      <div class="card-desc">Core DeFi infrastructure that powers the entire Kavi token network with seamless on-chain execution.</div>
+      <div class="card-footer">
+        <span class="card-cta">Launch app <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+    <!-- 2. Wheel of Fortune -->
+    <a class="card"
+       href="https://tranceglobal.github.io/wheel"
+       target="_blank" rel="noopener"
+       style="
+         --card-accent:#FFD700;
+         --card-glow:rgba(255,215,0,0.8);
+         --card-border:rgba(255,215,0,0.35);
+         --badge-bg:rgba(255,215,0,0.12);
+         --badge-color:#FFE566;
+         --badge-border:rgba(255,215,0,0.25);">
+      <div class="card-top">
+        <div class="card-icon">🎡</div>
+        <span class="card-badge">🔥 Hot</span>
+      </div>
+      <div class="card-cat">Reward</div>
+      <div class="card-name">Wheel of Fortune</div>
+      <div class="card-desc">Spin the wheel and win KAVI token rewards. Decentralized luck meets transparent on-chain randomness.</div>
+      <div class="card-footer">
+        <span class="card-cta">Spin now <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+    <!-- 3. Bubble Game -->
+    <a class="card"
+       href="https://tranceglobal.github.io/bubble"
+       target="_blank" rel="noopener"
+       style="
+         --card-accent:#00D4FF;
+         --card-glow:rgba(0,212,255,0.8);
+         --card-border:rgba(0,212,255,0.3);
+         --badge-bg:rgba(0,212,255,0.1);
+         --badge-color:#67E8F9;
+         --badge-border:rgba(0,212,255,0.25);">
+      <div class="card-top">
+        <div class="card-icon">🫧</div>
+        <span class="card-badge">Game</span>
+      </div>
+      <div class="card-cat">Play &amp; Earn</div>
+      <div class="card-name">Bubble Game</div>
+      <div class="card-desc">Pop bubbles, earn tokens. A fun on-chain arcade game where every move is rewarded with KAVI.</div>
+      <div class="card-footer">
+        <span class="card-cta">Play now <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+    <!-- 4. LastStand -->
+    <a class="card"
+       href="https://tranceglobal.github.io/last_stand"
+       target="_blank" rel="noopener"
+       style="
+         --card-accent:#FF4E6A;
+         --card-glow:rgba(255,78,106,0.8);
+         --card-border:rgba(255,78,106,0.35);
+         --badge-bg:rgba(255,78,106,0.12);
+         --badge-color:#FF91A0;
+         --badge-border:rgba(255,78,106,0.25);">
+      <div class="card-top">
+        <div class="card-icon">⚔️</div>
+        <span class="card-badge">⚡ Battle</span>
+      </div>
+      <div class="card-cat">Battle Arena</div>
+      <div class="card-name">LastStand</div>
+      <div class="card-desc">Strategic battle game where you stake KAVI tokens and fight to claim the last position standing.</div>
+      <div class="card-footer">
+        <span class="card-cta">Enter battle <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+    <!-- 5. KaviSwap -->
+    <a class="card"
+       href="https://kaviecosystem.github.io/kaviswap/"
+       target="_blank" rel="noopener"
+       style="
+         --card-accent:#00E5A0;
+         --card-glow:rgba(0,229,160,0.8);
+         --card-border:rgba(0,229,160,0.3);
+         --badge-bg:rgba(0,229,160,0.1);
+         --badge-color:#6EFFD4;
+         --badge-border:rgba(0,229,160,0.25);">
+      <div class="card-top">
+        <div class="card-icon">🔄</div>
+        <span class="card-badge">DeFi</span>
+      </div>
+      <div class="card-cat">Decentralised Exchange</div>
+      <div class="card-name">KaviSwap</div>
+      <div class="card-desc">Instantly swap tokens at the best rates on the Kavi decentralized exchange — fast, safe, trustless.</div>
+      <div class="card-footer">
+        <span class="card-cta">Swap tokens <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+    <!-- 6. KaviBulkBuy -->
+    <a class="card"
+       href="https://kaviecosystem.github.io/kavibulkbuy"
+       target="_blank" rel="noopener"
+       style="
+         --card-accent:#FB923C;
+         --card-glow:rgba(251,146,60,0.8);
+         --card-border:rgba(251,146,60,0.35);
+         --badge-bg:rgba(251,146,60,0.12);
+         --badge-color:#FDBA74;
+         --badge-border:rgba(251,146,60,0.25);">
+      <div class="card-top">
+        <div class="card-icon">🛒</div>
+        <span class="card-badge">Bulk</span>
+      </div>
+      <div class="card-cat">Volume Tool</div>
+      <div class="card-name">KaviBulkBuy</div>
+      <div class="card-desc">Purchase KAVI tokens in bulk across multiple wallets with optimized gas and automated distribution.</div>
+      <div class="card-footer">
+        <span class="card-cta">Buy in bulk <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-line"></div>
+    <span class="footer-text">Powered by KAVI Token</span>
+    <div class="footer-line"></div>
+  </footer>
+
+</div><!-- /wrapper -->
+
+<script>
+  /* ─── CUSTOM CURSOR ─── */
+  const cursor = document.getElementById('cursor');
+  let mx = -100, my = -100, cx = -100, cy = -100;
+
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(c => {
+    c.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+    c.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+  });
+
+  (function animCursor() {
+    cx += (mx - cx) * 0.12;
+    cy += (my - cy) * 0.12;
+    cursor.style.left = cx + 'px';
+    cursor.style.top  = cy + 'px';
+    requestAnimationFrame(animCursor);
+  })();
+
+  /* ─── PARTICLE CANVAS ─── */
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); initParticles(); });
+
+  const PARTICLE_COUNT = 80;
+  let particles = [];
+
+  function randomBetween(a, b) { return a + Math.random() * (b - a); }
+
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: randomBetween(0.5, 2.2),
+        vx: randomBetween(-0.15, 0.15),
+        vy: randomBetween(-0.2, -0.05),
+        alpha: randomBetween(0.15, 0.6),
+        gold: Math.random() > 0.7,
+      });
+    }
+  }
+  initParticles();
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.gold
+        ? `rgba(245,200,66,${p.alpha})`
+        : `rgba(180,160,255,${p.alpha * 0.6})`;
+      ctx.fill();
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.y < -4) { p.y = canvas.height + 4; p.x = Math.random() * canvas.width; }
+      if (p.x < -4) { p.x = canvas.width + 4; }
+      if (p.x > canvas.width + 4) { p.x = -4; }
+    });
+
+    /* draw faint connection lines between nearby particles */
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 90) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          const opacity = (1 - dist / 90) * 0.07;
+          ctx.strokeStyle = `rgba(245,200,66,${opacity})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+  /* ─── CARD TILT EFFECT ─── */
+  cards.forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const cx2 = rect.width / 2;
+      const cy2 = rect.height / 2;
+      const rotX = ((y - cy2) / cy2) * -6;
+      const rotY = ((x - cx2) / cx2) * 6;
+      card.style.transform = `translateY(-6px) perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+    });
+  });
+
+  /* ─── STAT COUNTER ANIMATION ─── */
+  // animate the "6" stat
+  const statNums = document.querySelectorAll('.stat-num');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = parseInt(el.dataset.target);
+        if (!isNaN(target)) {
+          let current = 0;
+          const step = Math.ceil(target / 30);
+          const timer = setInterval(() => {
+            current = Math.min(current + step, target);
+            el.textContent = current;
+            if (current >= target) clearInterval(timer);
+          }, 40);
+        }
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  statNums.forEach(el => {
+    if (!isNaN(parseInt(el.textContent))) {
+      el.dataset.target = el.textContent;
+      el.textContent = '0';
+      observer.observe(el);
+    }
+  });
+</script>
+
+</body>
+</html>
