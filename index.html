@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kavi Ecosystem — Token Utilities</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --kavi-cyan: #00e5ff;
+    --kavi-cyan2: #00b8d4;
+    --kavi-blue: #1565c0;
+    --kavi-blue-light: #42a5f5;
+    --kavi-dark: #020b14;
+    --kavi-dark2: #061422;
+    --kavi-dark3: #0a1e30;
+    --kavi-border: rgba(0,229,255,0.12);
+    --kavi-border-bright: rgba(0,229,255,0.5);
+    --text-primary: #e8f4ff;
+    --text-secondary: rgba(232,244,255,0.55);
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--kavi-dark); font-family: 'Rajdhani', sans-serif; color: var(--text-primary); min-height: 100vh; overflow-x: hidden; position: relative; }
+  #stars-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .grid-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .scanlines { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px); }
+  .wrapper { position: relative; z-index: 2; max-width: 1080px; margin: 0 auto; padding: 0 28px 100px; }
+
+  /* HEADER */
+  header { text-align: center; padding: 64px 20px 44px; }
+
+
+  .site-title {
+    font-family: 'Orbitron', sans-serif; font-size: clamp(26px,5vw,50px);
+    font-weight: 900; letter-spacing: 8px; text-transform: uppercase;
+    background: linear-gradient(130deg, #00e5ff 0%, #ffffff 40%, #42a5f5 75%, #00b8d4 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    animation: shimmer 5s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
+  .site-tagline { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--kavi-cyan); letter-spacing: 4px; text-transform: uppercase; margin-top: 10px; opacity: 0.7; }
+  .header-divider { width: 220px; height: 1px; background: linear-gradient(90deg, transparent, var(--kavi-cyan), transparent); margin: 26px auto 0; }
+
+  /* STATS BAR */
+  .stats-bar { display: flex; justify-content: center; margin: 36px 0; border: 1px solid var(--kavi-border); border-radius: 12px; overflow: hidden; background: var(--kavi-dark2); }
+  .stat-item { flex: 1; padding: 18px 20px; text-align: center; border-right: 1px solid var(--kavi-border); }
+  .stat-item:last-child { border-right: none; }
+  .stat-value { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: var(--kavi-cyan); display: block; }
+  .stat-label { font-size: 11px; font-family: 'Space Mono', monospace; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; display: block; }
+
+  /* SECTION SEP */
+  .sep { display: flex; align-items: center; gap: 16px; margin: 20px 0 28px; }
+  .sep-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--kavi-border-bright), transparent); }
+  .sep-line.r { background: linear-gradient(270deg, var(--kavi-border-bright), transparent); }
+  .sep-label { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 3px; color: var(--kavi-cyan); text-transform: uppercase; opacity: 0.8; white-space: nowrap; }
+
+  /* CARDS */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; margin-bottom: 18px; }
+  .card {
+    position: relative; background: var(--kavi-dark2); border: 1px solid var(--kavi-border);
+    border-radius: 18px; padding: 26px 22px 22px; text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: transform 0.3s cubic-bezier(.22,1,.36,1), border-color 0.3s, box-shadow 0.3s;
+    animation: fade-up 0.5s ease both;
+  }
+  @keyframes fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  .card:nth-child(1){animation-delay:.05s} .card:nth-child(2){animation-delay:.12s}
+  .card:nth-child(3){animation-delay:.19s} .card:nth-child(4){animation-delay:.26s}
+  .card:nth-child(5){animation-delay:.33s} .card:nth-child(6){animation-delay:.40s}
+
+  .card::before {
+    content: ''; position: absolute; top: 0; right: 0; width: 36px; height: 36px;
+    border-top: 2px solid var(--accent, var(--kavi-cyan)); border-right: 2px solid var(--accent, var(--kavi-cyan));
+    border-radius: 0 18px 0 0; opacity: 0.3; transition: opacity 0.3s, width 0.3s, height 0.3s;
+  }
+  .card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; width: 28px; height: 28px;
+    border-bottom: 1px solid var(--accent, var(--kavi-cyan)); border-left: 1px solid var(--accent, var(--kavi-cyan));
+    border-radius: 0 0 0 18px; opacity: 0.15; transition: opacity 0.3s;
+  }
+  .card:hover { transform: translateY(-6px); border-color: var(--accent, var(--kavi-cyan)); box-shadow: 0 0 32px var(--glow, rgba(0,229,255,0.1)), 0 20px 40px rgba(0,0,0,0.5); }
+  .card:hover::before { opacity: 0.9; width: 56px; height: 56px; }
+  .card:hover::after { opacity: 0.5; }
+
+  .card-glow { position: absolute; inset: 0; border-radius: 18px; background: radial-gradient(ellipse at 50% 0%, var(--glow-bg, rgba(0,229,255,0.05)) 0%, transparent 70%); opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+  .card:hover .card-glow { opacity: 1; }
+
+  .card-category { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent, var(--kavi-cyan)); opacity: 0.65; margin-bottom: 16px; }
+  .card-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+  .card-icon {
+    width: 54px; height: 54px; flex-shrink: 0; border-radius: 14px;
+    border: 1px solid var(--accent, var(--kavi-cyan)); background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    transition: box-shadow 0.3s;
+  }
+  .card:hover .card-icon { box-shadow: 0 0 18px var(--glow, rgba(0,229,255,0.25)); }
+  .card-meta { flex: 1; min-width: 0; }
+  .card-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+  .card-title { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.5px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 1.5px; padding: 3px 7px; border-radius: 100px; text-transform: uppercase; font-weight: 700; }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: blink 2s ease-in-out infinite; flex-shrink: 0; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .badge.live  { background: rgba(0,230,118,0.1);  color: #00e676; border: 1px solid rgba(0,230,118,0.25); }
+  .badge.game  { background: rgba(0,229,255,0.1);  color: #00e5ff; border: 1px solid rgba(0,229,255,0.28); }
+  .badge.defi  { background: rgba(66,165,245,0.12); color: #42a5f5; border: 1px solid rgba(66,165,245,0.3); }
+
+  .card-desc { font-size: 13.5px; font-weight: 400; color: var(--text-secondary); line-height: 1.55; margin-bottom: 20px; }
+  .card-cta { display: flex; align-items: center; gap: 8px; font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--accent, var(--kavi-cyan)); text-transform: uppercase; margin-top: auto; transition: gap 0.25s; }
+  .card:hover .card-cta { gap: 14px; }
+  .cta-line { flex: 1; height: 1px; background: var(--accent, var(--kavi-cyan)); opacity: 0.2; transition: opacity 0.3s; }
+  .card:hover .cta-line { opacity: 0.5; }
+  .cta-arr { transition: transform 0.25s; }
+  .card:hover .cta-arr { transform: translateX(5px); }
+
+  /* WIDE CARDS */
+  .card-wide { flex-direction: row; align-items: center; grid-column: 1 / -1; padding: 28px 30px; gap: 22px; }
+  .card-wide .card-icon { width: 64px; height: 64px; font-size: 32px; border-radius: 18px; }
+  .card-wide .card-body { flex: 1; }
+  .card-wide .card-title { font-size: 18px; }
+  .card-wide .card-desc { margin-bottom: 14px; }
+  .card-wide .card-category { margin-bottom: 10px; }
+
+  /* ACCENT COLORS - all cyan/blue palette now */
+  .c-cyan    { --accent: #00e5ff; --glow: rgba(0,229,255,0.18); --glow-bg: rgba(0,229,255,0.05); }
+  .c-blue    { --accent: #42a5f5; --glow: rgba(66,165,245,0.18); --glow-bg: rgba(66,165,245,0.05); }
+  .c-teal    { --accent: #00bcd4; --glow: rgba(0,188,212,0.18); --glow-bg: rgba(0,188,212,0.05); }
+  .c-sky     { --accent: #29b6f6; --glow: rgba(41,182,246,0.18); --glow-bg: rgba(41,182,246,0.05); }
+  .c-indigo  { --accent: #7986cb; --glow: rgba(121,134,203,0.18); --glow-bg: rgba(121,134,203,0.05); }
+  .c-aqua    { --accent: #26c6da; --glow: rgba(38,198,218,0.18); --glow-bg: rgba(38,198,218,0.05); }
+
+  /* FOOTER */
+  footer { margin-top: 60px; padding: 28px 20px; border-top: 1px solid var(--kavi-border); display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+  .footer-text { font-family: 'Space Mono', monospace; font-size: 9px; color: rgba(0,229,255,0.3); letter-spacing: 3px; text-transform: uppercase; }
+  .footer-text strong { color: rgba(0,229,255,0.6); }
+  .footer-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(0,229,255,0.2); }
+
+  @media (max-width: 600px) {
+    .stats-bar { flex-direction: column; }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--kavi-border); }
+    .stat-item:last-child { border-bottom: none; }
+    .card-wide { flex-direction: column; align-items: flex-start; }
+    .site-title { letter-spacing: 3px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+<div class="grid-bg"></div>
+<div class="scanlines"></div>
+
+<div class="wrapper">
+
+  <header>
+    <div class="site-title">Kavi Ecosystem</div>
+    <div class="site-tagline">Token Utilities &amp; DeFi Protocol Suite</div>
+    <div class="header-divider"></div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-value">6</span>
+      <span class="stat-label">Utilities</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">4</span>
+      <span class="stat-label">Games</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">2</span>
+      <span class="stat-label">DeFi Tools</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" style="color:#00e676;font-size:14px">● Live</span>
+      <span class="stat-label">All Systems</span>
+    </div>
+  </div>
+
+  <div class="sep">
+    <div class="sep-line"></div>
+    <div class="sep-label">⬡ Protocol &amp; Gaming Utilities</div>
+    <div class="sep-line r"></div>
+  </div>
+
+  <div class="cards-grid">
+    <a class="card c-cyan" href="https://tranceglobal.github.io/protocol1">
+      <div class="card-glow"></div>
+      <div class="card-category">Core Protocol · #01</div>
+      <div class="card-top">
+        <div class="card-icon">⚡</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <div class="card-title">Trance Protocol</div>
+            <span class="badge live"><span class="badge-dot"></span>Live</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-desc">The foundational protocol layer powering cross-chain interactions within the Kavi ecosystem.</div>
+      <div class="card-cta"><span>Enter Protocol</span><span class="cta-line"></span><span class="cta-arr">→</span></div>
+    </a>
+
+    <a class="card c-blue" href="https://tranceglobal.github.io/wheel">
+      <div class="card-glow"></div>
+      <div class="card-category">Reward Mechanism · #02</div>
+      <div class="card-top">
+        <div class="card-icon">🎡</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <div class="card-title">Wheel of Fortune</div>
+            <span class="badge game"><span class="badge-dot"></span>Game</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-desc">Spin and earn — a luck-based reward mechanism distributing KAVI tokens to participants.</div>
+      <div class="card-cta"><span>Spin Now</span><span class="cta-line"></span><span class="cta-arr">→</span></div>
+    </a>
+
+    <a class="card c-teal" href="https://tranceglobal.github.io/bubble">
+      <div class="card-glow"></div>
+      <div class="card-category">Arcade · #03</div>
+      <div class="card-top">
+        <div class="card-icon">🫧</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <div class="card-title">Bubble Game</div>
+            <span class="badge game"><span class="badge-dot"></span>Game</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-desc">Play-to-earn bubble arcade — test your precision for a chance to win ecosystem rewards.</div>
+      <div class="card-cta"><span>Play Now</span><span class="cta-line"></span><span class="cta-arr">→</span></div>
+    </a>
+
+    <a class="card c-indigo" href="https://tranceglobal.github.io/last_stand">
+      <div class="card-glow"></div>
+      <div class="card-category">Battle Game · #04</div>
+      <div class="card-top">
+        <div class="card-icon">⚔️</div>
+        <div class="card-meta">
+          <div class="card-title-row">
+            <div class="card-title">LastStand</div>
+            <span class="badge game"><span class="badge-dot"></span>Game</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-desc">High-stakes battle game — only the last standing holder claims the ultimate prize pool.</div>
+      <div class="card-cta"><span>Enter Battle</span><span class="cta-line"></span><span class="cta-arr">→</span></div>
+    </a>
+  </div>
+
+  <div class="sep" style="margin-top:36px">
+    <div class="sep-line"></div>
+    <div class="sep-label">◈ DeFi Utilities</div>
+    <div class="sep-line r"></div>
+  </div>
+
+  <div class="cards-grid" style="grid-template-columns:1fr">
+    <a class="card c-sky card-wide" href="https://kaviecosystem.github.io/kaviswap/">
+      <div class="card-glow"></div>
+      <div class="card-icon">🔁</div>
+      <div class="card-body">
+        <div class="card-category">Decentralized Exchange · #05</div>
+        <div class="card-title-row" style="margin-bottom:8px">
+          <div class="card-title">KaviSwap</div>
+          <span class="badge defi"><span class="badge-dot"></span>DeFi</span>
+          <span class="badge live"><span class="badge-dot"></span>Live</span>
+        </div>
+        <div class="card-desc">Seamlessly swap tokens within the Kavi ecosystem. Low slippage, deep liquidity, and instant on-chain settlement — the primary DEX for all KAVI token pairs.</div>
+        <div class="card-cta"><span>Launch Swap</span><span class="cta-line"></span><span class="cta-arr">→</span></div>
+      </div>
+    </a>
+
+    <a class="card c-aqua card-wide" href="https://kaviecosystem.github.io/kavibulkbuy">
+      <div class="card-glow"></div>
+      <div class="card-icon">📦</div>
+      <div class="card-body">
+        <div class="card-category">Batch Purchase Tool · #06</div>
+        <div class="card-title-row" style="margin-bottom:8px">
+          <div class="card-title">KaviBulkBuy</div>
+          <span class="badge defi"><span class="badge-dot"></span>Utility</span>
+          <span class="badge live"><span class="badge-dot"></span>Live</span>
+        </div>
+        <div class="card-desc">Acquire large token positions in a single transaction. Built for power users — batch buy KAVI tokens efficiently and economically with minimal gas fees.</div>
+        <div class="card-cta"><span>Bulk Purchase</span><span class="cta-line"></span><span class="cta-arr">→</span></div>
+      </div>
+    </a>
+  </div>
+
+  <footer>
+    <span class="footer-text">© 2025 <strong>Kavi Ecosystem</strong></span>
+    <span class="footer-dot"></span>
+    <span class="footer-text">All utilities powered by <strong>KAVI Token</strong></span>
+    <span class="footer-dot"></span>
+    <span class="footer-text"><strong>6</strong> Live Products</span>
+  </footer>
+
+</div>
+
+<script>
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < 180; i++) {
+      const isCyan = Math.random() > 0.7;
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.4 + 0.3,
+        speed: Math.random() * 0.003 + 0.001,
+        phase: Math.random() * Math.PI * 2,
+        isCyan
+      });
+    }
+  }
+  function drawStars(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const s of stars) {
+      const op = 0.15 + 0.7 * (0.5 + 0.5 * Math.sin(t * s.speed * 60 + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.isCyan
+        ? 'rgba(0,229,255,' + op.toFixed(2) + ')'
+        : 'rgba(255,255,255,' + op.toFixed(2) + ')';
+      ctx.fill();
+    }
+    requestAnimationFrame(drawStars);
+  }
+  resize(); initStars();
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  requestAnimationFrame(drawStars);
+</script>
+</body>
+</html>
